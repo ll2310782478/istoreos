@@ -1,0 +1,55 @@
+name: Build iStoreOS ARMv7 Firmware
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 第一步：检出源码
+    - name: Checkout source code
+      uses: actions/checkout@v2
+
+    # 第二步：设置编译工具链
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libncurses5-dev \
+        gawk git subversion gettext libssl-dev python3 \
+        unzip zlib1g-dev file wget gcc-arm-linux-gnueabi
+        
+    # 第三步：下载 iStoreOS 源码
+    - name: Download iStoreOS source
+      run: |
+        git clone https://github.com/ll2310782478/istoreos.git
+        cd istoreos
+
+    # 第四步：更新和安装 OpenWrt/iStoreOS 的编译依赖
+    - name: Update Feeds
+      run: |
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
+    # 第五步：配置编译选项（例如配置 ARMv7 的设备目标）
+    - name: Configure for ARMv7
+      run: |
+        make menuconfig # 可选，可以使用 `defconfig` 替代，或直接使用已有的配置
+
+    # 第六步：编译固件
+    - name: Build ARMv7 Firmware
+      run: |
+        make -j$(nproc) ARCH=arm CROSS_COMPILE=arm-linux-gnueabi-
+
+    # 第七步：上传编译产物
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: firmware
+        path: bin/targets/
